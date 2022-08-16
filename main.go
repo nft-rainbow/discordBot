@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nft-rainbow/discordBot/models"
+	"github.com/nft-rainbow/discordBot/utils"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,10 +19,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-
-const timeout time.Duration = time.Second * 10
-
-var games map[string]time.Time = make(map[string]time.Time)
+var games map[string]int = make(map[string]int)
 
 func initConfig() {
 	viper.SetConfigName("config")             // name of config file (without extension)
@@ -35,7 +33,6 @@ func initConfig() {
 
 func init() {
 	initConfig()
-	//models.ConnectDB()
 }
 
 func main() {
@@ -45,42 +42,51 @@ func main() {
 	})
 	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		if strings.Contains(m.Content, "/claim") {
-			token, err := login()
-			if token == "" {
-				_, _ = s.ChannelMessageSend(m.ChannelID, "get access token failed")
-				return
-			}
+			userAddress := strings.Split(m.Content, " ")[1]
+
+			_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
 			if err != nil {
 				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
 				return
 			}
-			userAddress := strings.Split(m.Content, " ")[1]
+			if games[userAddress] > 0 {
+				_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("@%s One account can only obtain a NFT", m.Author.Username))
+				return
+			}
+
+			games[userAddress] ++
+			token, err := login()
+			if err != nil {
+				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+				games[userAddress] --
+				return
+			}
+			if token == "" {
+				_, _ = s.ChannelMessageSend(m.ChannelID, "get access token failed")
+				games[userAddress] --
+				return
+			}
+
 			resp , err := sendMintRequest(token, models.EasyMintMetaDto{
-				Chain: viper.GetString("easymint.chain"),
-				Name: viper.GetString("easymint.name"),
-				Description: viper.GetString("easymint.description"),
+				Chain: viper.GetString("easyMint.chain"),
+				Name: viper.GetString("easyMint.name"),
+				Description: viper.GetString("easyMint.description"),
 				MintToAddress: userAddress,
-				FileUrl: viper.GetString("easymint.file_url"),
+				FileUrl: viper.GetString("easyMint.fileUrl"),
 			})
 			if err != nil {
 				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+				games[userAddress] --
 				return
 			}
-			_, _ = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("UserAddress: %s \n NFTAddress: %s \n %s", resp.UserAddress, resp.NFTAddress, resp.Advertise), m.Reference())
+			_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+				Content:   fmt.Sprintf("@%s UserAddress: %s \n NFTAddress: %s \n %s", m.Author.Username, resp.UserAddress, resp.NFTAddress, resp.Advertise),
+				Reference: m.Reference(),
+				AllowedMentions: &discordgo.MessageAllowedMentions{nil, nil, []string{m.Author.ID},
+				},
+			})
+			//_, _ = s.ChannelMessageSendReply(m.ChannelID, fmt.Sprintf("Congratulate on minting NFT for %s successfully. Check this link to view it: %s \n  %s", resp.UserAddress, resp.NFTAddress, resp.Advertise), m.Reference())
 
-			games[m.ChannelID] = time.Now()
-			<-time.After(timeout)
-			if time.Since(games[m.ChannelID]) >= timeout {
-				archived := true
-				locked := true
-				_, err := s.ChannelEditComplex(m.ChannelID, &discordgo.ChannelEdit{
-					Archived: archived,
-					Locked:   locked,
-				})
-				if err != nil {
-					panic(err)
-				}
-			}
 		}
 	})
 
@@ -94,7 +100,6 @@ func main() {
 	signal.Notify(stop, os.Interrupt)
 	<-stop
 	log.Println("Graceful shutdown")
-
 }
 
 func sendMintRequest(token string, dto models.EasyMintMetaDto) (*models.MintResp, error){
@@ -104,7 +109,7 @@ func sendMintRequest(token string, dto models.EasyMintMetaDto) (*models.MintResp
 		return nil, err
 	}
 
-	req, _ := http.NewRequest("POST", viper.GetString("easymint.url"), bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", viper.GetString("easyMint.url"), bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
@@ -128,7 +133,7 @@ func sendMintRequest(token string, dto models.EasyMintMetaDto) (*models.MintResp
 	res := &models.MintResp{
 		UserAddress: dto.MintToAddress,
 		Advertise: "Powered by NFTRainbow",
-		NFTAddress: viper.GetString("easymint.mintRespPrefix") + strconv.Itoa(int(id)),
+		NFTAddress: viper.GetString("easyMint.mintRespPrefix") + strconv.Itoa(int(id)),
 	}
 
 	defer resp.Body.Close()
@@ -137,11 +142,11 @@ func sendMintRequest(token string, dto models.EasyMintMetaDto) (*models.MintResp
 
 func login() (string, error) {
 	data := make(map[string]string)
-	data["app_id"] = viper.GetString("app.app_id")
-	data["app_secret"] = viper.GetString("app.app_secret")
+	data["app_id"] = viper.GetString("app.appId")
+	data["app_secret"] = viper.GetString("app.appSecret")
 	b, _ := json.Marshal(data)
 
-	req, err := http.NewRequest("POST", viper.GetString("app.login_url"), bytes.NewBuffer(b))
+	req, err := http.NewRequest("POST", viper.GetString("app.loginUrl"), bytes.NewBuffer(b))
 	if err != nil {
 		panic(err)
 	}
@@ -167,7 +172,7 @@ func login() (string, error) {
 func getTokenId(id uint, token string) (uint64, error) {
 	t := models.MintTask{}
 	for t.TokenId == 0 {
-		req, err := http.NewRequest("GET", viper.GetString("getInfo_url") + strconv.Itoa(int(id)),nil)
+		req, err := http.NewRequest("GET", viper.GetString("easyMint.infoUrl") + strconv.Itoa(int(id)),nil)
 		if err != nil {
 			panic(err)
 		}
@@ -185,6 +190,7 @@ func getTokenId(id uint, token string) (uint64, error) {
 
 			return 0, err
 		}
+
 		fmt.Println(string(content))
 
 		err = json.Unmarshal(content, &t)

@@ -1,16 +1,16 @@
 app:
-  app_id:
-  app_secret:
-  login_url: https://api.nftrainbow.xyz/v1/login
+  appId:
+  appSecret:
+  loginUrl: https://api.nftrainbow.xyz/v1/login
 bot:
   token:
-easymint:
+easyMint:
   chain: conflux_test
   url: https://api.nftrainbow.xyz/v1/mints/easy/urls
-  file_url:
+  fileUrl:
   name:
   description:
   mintRespPrefix: https://testnet.confluxscan.io/nft/cfxtest:acgraybn1g1upesed09g96vxev79sdhmxjmz7bxzyy/
-getInfo_url: https://api.nftrainbow.xyz/v1/mints/
+  infoUrl: https://api.nftrainbow.xyz/v1/mints/
 
 
