@@ -1,32 +1,18 @@
+host: https://api.nftrainbow.xyz/
 app:
   appId:
   appSecret:
-  loginUrl: https://api.nftrainbow.xyz/v1/login
-bot:
-  token:
+botToken:
+chainType: conflux_test
 easyMint:
-  chain: conflux_test
-  url: https://api.nftrainbow.xyz/v1/mints/easy/urls
   fileUrl:
   name:
   description:
-fileUploadUrl: https://api.nftrainbow.xyz/v1/files
-mintRespPrefix: https://testnet.confluxscan.io/nft/cfxtest:acgraybn1g1upesed09g96vxev79sdhmxjmz7bxzyy/
-infoUrl: https://api.nftrainbow.xyz/v1/mints/
+mintRespPrefix: https://testnet.confluxscan.io/nft/
 customMint:
-  chain: conflux_test
-  url: https://api.nftrainbow.xyz/v1/mints/
   fileUrl:
   name:
   description:
-  metadataUri:
-  metadataUrl:
-  type: erc721
-deployContract:
-  type: erc721
-  name:
-  deployUrl:
-  infoUrl:
-advertise: Powered by NFTRainbow
+  contractType:
 
 

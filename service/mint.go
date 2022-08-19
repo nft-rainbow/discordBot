@@ -20,7 +20,7 @@ func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.Mint
 		return nil, err
 	}
 
-	req, _ := http.NewRequest("POST", viper.GetString("easyMint.url"), bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/mints/easy/urls", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
@@ -58,7 +58,7 @@ func SendCustomMintRequest(token string, dto models.CustomMintDto) (*models.Mint
 		return nil, err
 	}
 
-	req, _ := http.NewRequest("POST", viper.GetString("customMint.url"), bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/mints/", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
@@ -101,7 +101,7 @@ func CreateMetadata(token, fileUrl, name, description string) (string, error) {
 		return "", err
 	}
 
-	req, _ := http.NewRequest("POST", viper.GetString("customMint.metadataUrl"), bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/metadata/", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
@@ -126,7 +126,7 @@ func CreateMetadata(token, fileUrl, name, description string) (string, error) {
 func getTokenId(id uint, token string) (uint64, error) {
 	t := models.MintTask{}
 	for t.TokenId == 0 {
-		req, err := http.NewRequest("GET", viper.GetString("infoUrl") + strconv.Itoa(int(id)),nil)
+		req, err := http.NewRequest("GET", viper.GetString("host") + "v1/mints/" + strconv.Itoa(int(id)),nil)
 		if err != nil {
 			panic(err)
 		}

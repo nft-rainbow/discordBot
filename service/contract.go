@@ -12,13 +12,13 @@ import (
 	"time"
 )
 
-func DeployContract(token, name, symbol, owner string) (string, error){
+func DeployContract(token, name, symbol, owner, contractType string) (string, error){
 	contract := models.ContractDeployDto{
 		Chain: utils.CONFLUX_TEST,
 		Name: name,
 		Symbol: symbol,
 		OwnerAddress: owner,
-		Type: viper.GetString("deployContract.type"),
+		Type: contractType,
 	}
 
 	b, err := json.Marshal(contract)
@@ -26,7 +26,7 @@ func DeployContract(token, name, symbol, owner string) (string, error){
 		return "", err
 	}
 
-	req, _ := http.NewRequest("POST", viper.GetString("deployContract.deployUrl"), bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/contracts/", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
@@ -56,7 +56,7 @@ func DeployContract(token, name, symbol, owner string) (string, error){
 func getContractAddress(id uint, token string) (string, error){
 	t := models.Contract{}
 	for t.Address == "" {
-		req, err := http.NewRequest("GET", viper.GetString("deployContract.infoUrl") + strconv.Itoa(int(id)),nil)
+		req, err := http.NewRequest("GET", viper.GetString("host") + "v1/contracts/detail/" + strconv.Itoa(int(id)),nil)
 		if err != nil {
 			panic(err)
 		}

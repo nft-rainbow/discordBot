@@ -14,7 +14,7 @@ func Login() (string, error) {
 	data["app_secret"] = viper.GetString("app.appSecret")
 	b, _ := json.Marshal(data)
 
-	req, err := http.NewRequest("POST", viper.GetString("app.loginUrl"), bytes.NewBuffer(b))
+	req, err := http.NewRequest("POST", viper.GetString("host") + "v1/login", bytes.NewBuffer(b))
 	if err != nil {
 		panic(err)
 	}

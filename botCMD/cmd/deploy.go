@@ -26,13 +26,14 @@ var deployCmd = &cobra.Command{
 	Use:   "deploy",
 	Short: "deploy erc721 contract",
 	Long: `The admin of the bot can use this cmd to deploy his own contract.`,
-	Example: `botCMD deploy [name] [symbol] [appAddress]
+	Example: `botCMD deploy [name] [symbol] [type] [appAddress]
 - name The name of the contract
 - symbol The symbol of the NFT
+- type The type of the contract including erc721 and erc1155
 - appAddress The address of the NFTRainbow app`,
-	Args: cobra.ExactArgs(3),
+	Args: cobra.ExactArgs(4),
 	Run: func(cmd *cobra.Command, args []string) {
-		name, symbol, address := args[0], args[1], args[2]
+		name, symbol, address, contractType := args[0], args[1], args[3], args[2]
 		_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, address)
 		if err != nil {
 			fmt.Println(err)
@@ -45,7 +46,7 @@ var deployCmd = &cobra.Command{
 			return
 		}
 
-		contractAddress, err := service.DeployContract(token, name, symbol, address)
+		contractAddress, err := service.DeployContract(token, name, symbol, address, contractType)
 		if err != nil {
 			fmt.Println(err)
 			return

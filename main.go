@@ -33,7 +33,7 @@ func init() {
 }
 
 func main() {
-	s, _ := discordgo.New("Bot " + viper.GetString("bot.token"))
+	s, _ := discordgo.New("Bot " + viper.GetString("botToken"))
 	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		fmt.Println("Bot is ready")
 	})
@@ -76,7 +76,7 @@ func main() {
 			}
 
 			resp , err := service.SendEasyMintRequest(token, models.EasyMintMetaDto{
-				Chain: viper.GetString("easyMint.chain"),
+				Chain: viper.GetString("chainType"),
 				Name: viper.GetString("easyMint.name"),
 				Description: viper.GetString("easyMint.description"),
 				MintToAddress: userAddress,
@@ -152,11 +152,11 @@ func main() {
 			}
 
 			resp , err := service.SendCustomMintRequest(token, models.CustomMintDto{
-				Chain: viper.GetString("customMint.chain"),
+				Chain: viper.GetString("chainType"),
 				MintToAddress: userAddress,
 				ContractAddress: contractAddress,
 				MetadataUri: metadataUri,
-				ContractType: viper.GetString("customMint.type"),
+				ContractType: viper.GetString("customMint.contractType"),
 			})
 			if err != nil {
 				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())

@@ -28,7 +28,7 @@ func UploadFile(token, path string) (string, error){
 	contentType := bodyWriter.FormDataContentType()
 	bodyWriter.Close()
 
-	req, _ := http.NewRequest("POST", viper.GetString("fileUploadUrl"), bodyBuffer)
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/files", bodyBuffer)
 
 	req.Header.Add("Authorization", "Bearer " + token)
 	req.Header.Add("Content-Type", contentType)

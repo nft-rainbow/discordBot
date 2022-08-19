@@ -1,15 +1,6 @@
+host: https://api.nftrainbow.xyz/
 app:
   appId:
   appSecret:
-  loginUrl: https://api.nftrainbow.xyz/v1/login
-bot:
-  token:
-fileUploadUrl: https://api.nftrainbow.xyz/v1/files
-deployContract:
-  type: erc721
-  name:
-  deployUrl:
-  infoUrl:
-advertise: Powered by NFTRainbow
 
 
