@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"github.com/nft-rainbow/discordBot/database"
 	"github.com/nft-rainbow/discordBot/models"
 	"github.com/nft-rainbow/discordBot/service"
 	"github.com/nft-rainbow/discordBot/utils"
@@ -15,8 +18,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var easyMintRestrain map[string]int = make(map[string]int)
-var customRestrain map[string]int = make(map[string]int)
 
 func initConfig() {
 	viper.SetConfigName("config")             // name of config file (without extension)
@@ -33,6 +34,7 @@ func init() {
 }
 
 func main() {
+	database.ConnectDB()
 	s, _ := discordgo.New("Bot " + viper.GetString("botToken"))
 	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
 		fmt.Println("Bot is ready")
@@ -46,8 +48,9 @@ func main() {
 				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
 				return
 			}
-			if easyMintRestrain[userAddress] > 0 {
-				_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("@%s One account can only obtain a NFT", m.Author.Username))
+			err = checkRestrain(userAddress, database.EasyMintBucket)
+			if err != nil {
+				processErrorMessage(s,m, err.Error(), "", nil)
 				return
 			}
 
@@ -55,23 +58,16 @@ func main() {
 			if len(strings.Split(m.Content, " ")) >= 4 {
 				fileUrl = strings.Split(m.Content, " ")[3]
 				if _, err = url.ParseRequestURI(fileUrl); err != nil {
-					_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+					processErrorMessage(s,m, err.Error(), "", nil)
 					return
 				}
 			}else {
 				fileUrl = viper.GetString("easyMint.fileUrl")
 			}
 
-			easyMintRestrain[userAddress] ++
 			token, err := service.Login()
 			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
-				easyMintRestrain[userAddress] --
-				return
-			}
-			if token == "" {
-				_, _ = s.ChannelMessageSend(m.ChannelID, "get access token failed")
-				easyMintRestrain[userAddress] --
+				processErrorMessage(s,m, err.Error(), userAddress, database.EasyMintBucket)
 				return
 			}
 
@@ -83,8 +79,7 @@ func main() {
 				FileUrl: fileUrl,
 			})
 			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
-				easyMintRestrain[userAddress] --
+				processErrorMessage(s,m, err.Error(), userAddress, database.EasyMintBucket)
 				return
 			}
 			_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
@@ -102,21 +97,22 @@ func main() {
 			userAddress := contents[2]
 			_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
 			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+				processErrorMessage(s,m, err.Error(), "", database.CustomMintBucket)
 				return
 			}
 
 			contractAddress := contents[3]
 			_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, contractAddress)
 			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+				processErrorMessage(s,m, err.Error(), "", database.CustomMintBucket)
 				return
 			}
 
 			name, description := contents[4], contents[5]
 
-			if customRestrain[userAddress] > 0 {
-				_, _ = s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("@%s One account can only obtain a NFT", m.Author.ID))
+			err = checkRestrain(userAddress, database.CustomMintBucket)
+			if err != nil {
+				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 				return
 			}
 
@@ -124,30 +120,22 @@ func main() {
 			if len(strings.Split(m.Content, " ")) >= 7 {
 				fileUrl = strings.Split(m.Content, " ")[6]
 				if _, err = url.ParseRequestURI(fileUrl); err != nil {
-					_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
+					processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 					return
 				}
 			}else {
 				fileUrl = viper.GetString("customMint.fileUrl")
 			}
 
-			customRestrain[userAddress] ++
 			token, err := service.Login()
 			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
-				customRestrain[userAddress] --
-				return
-			}
-			if token == "" {
-				_, _ = s.ChannelMessageSend(m.ChannelID, "get access token failed")
-				customRestrain[userAddress] --
+				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 				return
 			}
 
 			metadataUri, err := service.CreateMetadata(token, fileUrl, name, description)
 			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
-				customRestrain[userAddress] --
+				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 				return
 			}
 
@@ -159,8 +147,7 @@ func main() {
 				ContractType: viper.GetString("customMint.contractType"),
 			})
 			if err != nil {
-				_, _ = s.ChannelMessageSend(m.ChannelID, err.Error())
-				customRestrain[userAddress] --
+				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 				return
 			}
 			_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
@@ -183,6 +170,41 @@ func main() {
 	<-stop
 	log.Println("Graceful shutdown")
 }
+
+func checkRestrain(address string, mintType []byte) error{
+	count, err := database.GetCount(address, mintType)
+	if err != nil {
+		return err
+	}
+	if count == nil {
+		err = database.InsertDB(address, []byte("1"), mintType)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if !bytes.Equal(count, []byte("0")) {
+		return errors.New("This address has minted the NFT")
+	}
+
+	return nil
+}
+
+func processErrorMessage(s *discordgo.Session, m *discordgo.MessageCreate, message, address string, mintType []byte) {
+	_, _ = s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+		Content:   fmt.Sprintf("<@%s> %s", m.Author.ID, message),
+		Reference: m.Reference(),
+		AllowedMentions: &discordgo.MessageAllowedMentions{nil, nil, []string{m.Author.ID},
+		},
+	})
+	if address != "" {
+		_ = database.InsertDB(address, []byte("0"), mintType)
+	}
+	return
+}
+
+
 
 
 
