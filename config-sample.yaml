@@ -21,10 +21,12 @@ customMint:
   description:
   metadataUri:
   metadataUrl:
+  type: erc721
 deployContract:
   type: erc721
   name:
   deployUrl:
   infoUrl:
+advertise: Powered by NFTRainbow
 
 

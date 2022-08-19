@@ -3,23 +3,31 @@ module github.com/nft-rainbow/discordBot
 go 1.17
 
 require (
+	github.com/Conflux-Chain/go-conflux-sdk v1.4.2
 	github.com/bwmarrin/discordgo v0.25.0
+	github.com/mitchellh/go-homedir v1.1.0
+	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
+	gorm.io/driver/mysql v1.3.6
 	gorm.io/gorm v1.23.8
 )
 
 require (
+	github.com/btcsuite/btcd v0.21.0-beta // indirect
+	github.com/ethereum/go-ethereum v1.10.15 // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
+	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/magiconair/properties v1.8.6 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/openweb3/go-rpc-provider v0.2.2 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
-	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/spf13/afero v1.8.2 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect

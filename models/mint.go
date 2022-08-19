@@ -15,9 +15,11 @@ type EasyMintMetaDto struct {
 
 type CustomMintDto struct {
 	Chain           string `form:"chain" json:"chain" binding:"required" oneof:"conflux conflux_test"`
+	ContractType    string `form:"contract_type" json:"contract_type" binding:"required"`
 	ContractAddress string `form:"contract_address" json:"contract_address" binding:"required"`
 	MintToAddress   string `form:"mint_to_address" json:"mint_to_address" binding:"required"`
 	TokenId         string `form:"token_id" json:"token_id"`
+	Amount          uint   `form:"amount" json:"amount"`
 	MetadataUri     string `form:"metadata_uri" json:"metadata_uri" binding:"required,uri"`
 }
 
