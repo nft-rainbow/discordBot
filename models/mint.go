@@ -13,11 +13,20 @@ type EasyMintMetaDto struct {
 	MintToAddress string `form:"mint_to_address" json:"mint_to_address" binding:"required"`
 }
 
+type CustomMintDto struct {
+	Chain           string `form:"chain" json:"chain" binding:"required" oneof:"conflux conflux_test"`
+	ContractAddress string `form:"contract_address" json:"contract_address" binding:"required"`
+	MintToAddress   string `form:"mint_to_address" json:"mint_to_address" binding:"required"`
+	TokenId         string `form:"token_id" json:"token_id"`
+	MetadataUri     string `form:"metadata_uri" json:"metadata_uri" binding:"required,uri"`
+}
+
 type MintResp struct {
 	UserAddress string `form:"user_address" json:"user_address"`
 	NFTAddress string `form:"nft_address" json:"nft_address"`
 	Advertise string `form:"advertise" json:"advertise"`
 }
+
 
 type MintTask struct {
 	BaseModel

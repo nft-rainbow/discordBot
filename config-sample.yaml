@@ -10,7 +10,21 @@ easyMint:
   fileUrl:
   name:
   description:
-  mintRespPrefix: https://testnet.confluxscan.io/nft/cfxtest:acgraybn1g1upesed09g96vxev79sdhmxjmz7bxzyy/
-  infoUrl: https://api.nftrainbow.xyz/v1/mints/
+fileUploadUrl: https://api.nftrainbow.xyz/v1/files
+mintRespPrefix: https://testnet.confluxscan.io/nft/cfxtest:acgraybn1g1upesed09g96vxev79sdhmxjmz7bxzyy/
+infoUrl: https://api.nftrainbow.xyz/v1/mints/
+customMint:
+  chain: conflux_test
+  url: https://api.nftrainbow.xyz/v1/mints/
+  fileUrl:
+  name:
+  description:
+  metadataUri:
+  metadataUrl:
+deployContract:
+  type: erc721
+  name:
+  deployUrl:
+  infoUrl:
 
 
