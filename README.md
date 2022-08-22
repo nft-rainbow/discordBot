@@ -6,7 +6,9 @@ This is a NFTRainbow-based discord bot, which helps users in the discord to mint
 
 ## References
 [NFTRainbow Console](https://console.nftrainbow.xyz/login)
+
 [NFTRainbow Doc](https://docs.nftrainbow.xyz/)
+
 [NFTRainbow Git](https://github.com/nft-rainbow)
 
 ## Functions
