@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
@@ -19,20 +20,23 @@ func Login() (string, error) {
 		panic(err)
 	}
 	req.Header.Add("Content-Type", "application/json")
-
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return  "", err
 	}
 	content, err := ioutil.ReadAll(resp.Body)
+
 	if err != nil {
 		return "", err
 	}
-	t := make(map[string]string)
+	t := make(map[string]interface{})
 	err = json.Unmarshal(content, &t)
 	if err != nil {
 		return "", err
 	}
+	if t["code"] != nil {
+		return "", errors.New(t["message"].(string))
+	}
 
-	return t["token"], nil
+	return t["token"].(string), nil
 }

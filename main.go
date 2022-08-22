@@ -9,7 +9,6 @@ import (
 	"github.com/nft-rainbow/discordBot/service"
 	"github.com/nft-rainbow/discordBot/utils"
 	"log"
-	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -40,7 +39,7 @@ func main() {
 		fmt.Println("Bot is ready")
 	})
 	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		// /claim easyMint <userAddress> (fileUrl)
+		// /claim easyMint <userAddress>
 		if strings.Contains(m.Content, "/claim easyMint") {
 			userAddress := strings.Split(m.Content, " ")[2]
 			_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
@@ -54,17 +53,6 @@ func main() {
 				return
 			}
 
-			var fileUrl string
-			if len(strings.Split(m.Content, " ")) >= 4 {
-				fileUrl = strings.Split(m.Content, " ")[3]
-				if _, err = url.ParseRequestURI(fileUrl); err != nil {
-					processErrorMessage(s,m, err.Error(), "", nil)
-					return
-				}
-			}else {
-				fileUrl = viper.GetString("easyMint.fileUrl")
-			}
-
 			token, err := service.Login()
 			if err != nil {
 				processErrorMessage(s,m, err.Error(), userAddress, database.EasyMintBucket)
@@ -76,7 +64,7 @@ func main() {
 				Name: viper.GetString("easyMint.name"),
 				Description: viper.GetString("easyMint.description"),
 				MintToAddress: userAddress,
-				FileUrl: fileUrl,
+				FileUrl: viper.GetString("easyMint.fileUrl"),
 			})
 			if err != nil {
 				processErrorMessage(s,m, err.Error(), userAddress, database.EasyMintBucket)
@@ -91,7 +79,7 @@ func main() {
 		}
 	})
 	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		// /claim customNFT <userAddress> <contract_address> <name> <description> (file_url)
+		// /claim customNFT <userAddress>
 		if strings.Contains(m.Content, "/claim customNFT") {
 			contents := strings.Split(m.Content, " ")
 			userAddress := contents[2]
@@ -101,30 +89,17 @@ func main() {
 				return
 			}
 
-			contractAddress := contents[3]
+			contractAddress := viper.GetString("customMint.contractAddress")
 			_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, contractAddress)
 			if err != nil {
 				processErrorMessage(s,m, err.Error(), "", database.CustomMintBucket)
 				return
 			}
 
-			name, description := contents[4], contents[5]
-
 			err = checkRestrain(userAddress, database.CustomMintBucket)
 			if err != nil {
 				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 				return
-			}
-
-			var fileUrl string
-			if len(strings.Split(m.Content, " ")) >= 7 {
-				fileUrl = strings.Split(m.Content, " ")[6]
-				if _, err = url.ParseRequestURI(fileUrl); err != nil {
-					processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
-					return
-				}
-			}else {
-				fileUrl = viper.GetString("customMint.fileUrl")
 			}
 
 			token, err := service.Login()
@@ -133,7 +108,7 @@ func main() {
 				return
 			}
 
-			metadataUri, err := service.CreateMetadata(token, fileUrl, name, description)
+			metadataUri, err := service.CreateMetadata(token, viper.GetString("customMint.fileUrl"), viper.GetString("customMint.name"), viper.GetString("customMint.description"))
 			if err != nil {
 				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 				return
