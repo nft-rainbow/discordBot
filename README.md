@@ -40,11 +40,14 @@ botCMD upload [file_path]
 Deploy the contract
 ````
 botCMD deploy [name] [symbol] [type] [appAddress]
-# name if the name of the contract
-# symbol is the symbol of the NFT
-# type is the type of the contract including erc721 and erc1155
-# appAddress is the address of the NFTRainbow app`,
 ````
+
+|  Parameters Name   | Meaning  | Required or Optional | 
+|  ----  | ----  | ---- | 
+| name  | The name of the NFT |required |
+| symbol | The symbol of the NFT |required |
+| type | The type of contracts including erc721 and erc1155 |required |
+| appAddress | The address of the app account,which can be obtained from the NFTRainbow console |required |
 
 ### Bot configuration
 Generate the `config.yaml`
