@@ -1,6 +1,4 @@
 # DiscordBot
-
-# DiscordBot
 DiscordNFTBot
 ## Description
 
