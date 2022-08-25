@@ -3,6 +3,8 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/nft-rainbow/discordBot/models"
 	"github.com/nft-rainbow/discordBot/utils"
 	"github.com/spf13/viper"
@@ -25,7 +27,7 @@ func DeployContract(token, name, symbol, owner, contractType string) (string, er
 	if err != nil {
 		return "", err
 	}
-
+	fmt.Println("Start to deploy contract")
 	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/contracts/", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
@@ -40,6 +42,15 @@ func DeployContract(token, name, symbol, owner, contractType string) (string, er
 	if err != nil {
 		return "", err
 	}
+	t := make(map[string]interface{})
+	err = json.Unmarshal(content, &t)
+	if err != nil {
+		return "", err
+	}
+	if t["code"] != nil {
+		return "", errors.New(t["message"].(string))
+	}
+
 	err = json.Unmarshal(content, &tmp)
 	if err != nil {
 		return "", err

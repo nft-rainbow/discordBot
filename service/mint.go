@@ -3,6 +3,8 @@ package service
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/nft-rainbow/discordBot/models"
 	"github.com/spf13/viper"
 	"io/ioutil"
@@ -11,15 +13,13 @@ import (
 	"time"
 )
 
-const Advertise = "Powered by NFTRainbow"
-
 func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.MintResp, error){
 	b, err := json.Marshal(dto)
 	if err != nil {
 		panic(err)
 		return nil, err
 	}
-
+	fmt.Println("Start to easy mint")
 	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/mints/easy/urls", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
@@ -35,7 +35,15 @@ func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.Mint
 	if err != nil {
 		return nil, err
 	}
-
+	t := make(map[string]interface{})
+	err = json.Unmarshal(content, &t)
+	if err != nil {
+		return nil, err
+	}
+	if t["code"] != nil {
+		return nil, errors.New(t["message"].(string))
+	}
+	fmt.Println(t)
 	id, err := getTokenId(tmp.ID, token)
 	if err != nil {
 		return nil, err
@@ -44,7 +52,7 @@ func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.Mint
 	res := &models.MintResp{
 		UserAddress: dto.MintToAddress,
 		Advertise: viper.GetString("advertise"),
-		NFTAddress: viper.GetString("mintRespPrefix") + strconv.Itoa(int(id)),
+		NFTAddress: viper.GetString("easyMint.mintRespPrefix") + strconv.Itoa(int(id)),
 	}
 
 	defer resp.Body.Close()
@@ -58,6 +66,7 @@ func SendCustomMintRequest(token string, dto models.CustomMintDto) (*models.Mint
 		return nil, err
 	}
 
+	fmt.Println("Start to custom mint")
 	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/mints/", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
@@ -73,6 +82,14 @@ func SendCustomMintRequest(token string, dto models.CustomMintDto) (*models.Mint
 	if err != nil {
 		return nil, err
 	}
+	t := make(map[string]interface{})
+	err = json.Unmarshal(content, &t)
+	if err != nil {
+		return nil, err
+	}
+	if t["code"] != nil {
+		return nil, errors.New(t["message"].(string))
+	}
 
 	id, err := getTokenId(tmp.ID, token)
 	if err != nil {
@@ -82,7 +99,7 @@ func SendCustomMintRequest(token string, dto models.CustomMintDto) (*models.Mint
 	res := &models.MintResp{
 		UserAddress: dto.MintToAddress,
 		Advertise: viper.GetString("advertise"),
-		NFTAddress: viper.GetString("mintRespPrefix") +  dto.ContractAddress + "/" + strconv.Itoa(int(id)),
+		NFTAddress: viper.GetString("customMint.mintRespPrefix") +  dto.ContractAddress + "/" + strconv.Itoa(int(id)),
 	}
 
 	defer resp.Body.Close()
@@ -100,7 +117,7 @@ func CreateMetadata(token, fileUrl, name, description string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	fmt.Println("Start to create metadata")
 	req, _ := http.NewRequest("POST", viper.GetString("host") + "v1/metadata/", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Authorization", "Bearer " + token)
@@ -119,20 +136,29 @@ func CreateMetadata(token, fileUrl, name, description string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	t := make(map[string]interface{})
+	err = json.Unmarshal(content, &t)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(t)
+	if t["code"] != nil {
+		return "", errors.New(t["message"].(string))
+	}
 
 	return tmp.MetadataURI, nil
 }
 
 func getTokenId(id uint, token string) (uint64, error) {
 	t := models.MintTask{}
-	for t.TokenId == 0 {
+	fmt.Println("Start to get token id")
+	for t.TokenId == 0 && t.Status != 1{
 		req, err := http.NewRequest("GET", viper.GetString("host") + "v1/mints/" + strconv.Itoa(int(id)),nil)
 		if err != nil {
 			panic(err)
 		}
 		req.Header.Add("Content-Type", "application/json")
 		req.Header.Add("Authorization", "Bearer " + token)
-
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			return 0, err

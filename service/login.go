@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
@@ -14,7 +15,7 @@ func Login() (string, error) {
 	data["app_id"] = viper.GetString("app.appId")
 	data["app_secret"] = viper.GetString("app.appSecret")
 	b, _ := json.Marshal(data)
-
+	fmt.Println("Start to login")
 	req, err := http.NewRequest("POST", viper.GetString("host") + "v1/login", bytes.NewBuffer(b))
 	if err != nil {
 		panic(err)

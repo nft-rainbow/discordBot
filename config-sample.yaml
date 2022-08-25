@@ -8,7 +8,7 @@ easyMint:
   fileUrl:
   name:
   description:
-mintRespPrefix: https://testnet.confluxscan.io/nft/
+mintRespPrefix: https://testnet.confluxscan.io/nft/cfxtest:acgraybn1g1upesed09g96vxev79sdhmxjmz7bxzyy/
 customMint:
   fileUrl:
   name:

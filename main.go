@@ -80,7 +80,7 @@ func main() {
 	})
 	s.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// /claim customNFT <userAddress>
-		if strings.Contains(m.Content, "/claim customNFT") {
+		if strings.Contains(m.Content, "/claim customMint") {
 			contents := strings.Split(m.Content, " ")
 			userAddress := contents[2]
 			_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
@@ -113,13 +113,16 @@ func main() {
 				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
 				return
 			}
-
 			resp , err := service.SendCustomMintRequest(token, models.CustomMintDto{
-				Chain: viper.GetString("chainType"),
-				MintToAddress: userAddress,
-				ContractAddress: contractAddress,
-				MetadataUri: metadataUri,
-				ContractType: viper.GetString("customMint.contractType"),
+				models.ContractInfoDto{
+					Chain: viper.GetString("chainType"),
+					ContractType: viper.GetString("customMint.contractType"),
+					ContractAddress: contractAddress,
+				},
+				models.MintItemDto{
+					MintToAddress: userAddress,
+					MetadataUri: metadataUri,
+				},
 			})
 			if err != nil {
 				processErrorMessage(s,m, err.Error(), userAddress, database.CustomMintBucket)
