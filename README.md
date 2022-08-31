@@ -67,14 +67,14 @@ go run main.go
 
 ### How to mint the NFTs
 #### EasyMint
-After the users in the discord channel can input the `/claim [user_address]` to the chat frame, the bot will return the NFT information in several seconds.
+After the users in the discord channel can input the `/claim easy-mint [user_address]` to the chat frame, the bot will return the NFT information in several seconds.
 
 |  Parameters Name   | Meaning  | Required or Optional | 
 |  ----  | ----  | ---- | 
 | user_address  | The blockchain address of the user |required |
 
 #### CustomMint
-After the users in the discord channel can input the `/claim customNFT [user_address]` to the chat frame, the bot will return the NFT information in several seconds.
+After the users in the discord channel can input the `/claim custom-mint [user_address]` to the chat frame, the bot will return the NFT information in several seconds.
 
 |  Parameters Name   | Meaning  | Required or Optional | 
 |  ----  | ----  | ---- | 

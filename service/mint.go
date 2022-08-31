@@ -43,7 +43,6 @@ func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.Mint
 	if t["code"] != nil {
 		return nil, errors.New(t["message"].(string))
 	}
-	fmt.Println(t)
 	id, err := getTokenId(tmp.ID, token)
 	if err != nil {
 		return nil, err
@@ -141,7 +140,6 @@ func CreateMetadata(token, fileUrl, name, description string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(t)
 	if t["code"] != nil {
 		return "", errors.New(t["message"].(string))
 	}
