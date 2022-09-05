@@ -35,7 +35,9 @@ type MintItemDto struct {
 type MintResp struct {
 	UserAddress string `form:"user_address" json:"user_address"`
 	NFTAddress string `form:"nft_address" json:"nft_address"`
-	Advertise string `form:"advertise" json:"advertise"`
+	Contract string `form:"advertise" json:"advertise"`
+	TokenID string `form:"token_id" json:"token_id"`
+	Time string `json:"created_at"`
 }
 
 
@@ -47,7 +49,7 @@ type MintTask struct {
 	Contract  string `gorm:"type:varchar(256);index" json:"contract"`
 	MintTo    string `gorm:"type:varchar(256);index" json:"mint_to"`
 	TokenURI  string `gorm:"type:varchar(256)" json:"token_uri"`
-	TokenId   uint64 `gorm:"index" json:"token_id"`
+	TokenId   string `gorm:"index" json:"token_id"`
 	Amount    uint   `json:"amount"`
 	Status    uint   `json:"status"` // 0-pending, 1-success, 2-failed
 	Hash      string `gorm:"type:varchar(256)" json:"hash"`

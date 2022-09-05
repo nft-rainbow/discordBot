@@ -4,16 +4,19 @@ app:
   appSecret:
 botToken:
 chainType: conflux_test
+advertise: Powered by NFTRainbow
 easyMint:
   fileUrl:
   name:
   description:
-mintRespPrefix: https://testnet.confluxscan.io/nft/cfxtest:acgraybn1g1upesed09g96vxev79sdhmxjmz7bxzyy/
+  mintRespPrefix: https://testnet.confluxscan.io/nft/
+  contract: cfxtest:acgraybn1g1upesed09g96vxev79sdhmxjmz7bxzyy
 customMint:
   fileUrl:
   name:
   description:
   contractType:
   contractAddress:
+  mintRespPrefix: https://testnet.confluxscan.io/nft/
 
 

@@ -67,9 +67,10 @@ var (
 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"claim": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			options := i.ApplicationCommandData().Options
-			resp := ""
+			var resp *models.MintResp
 			userAddress := options[0].Options[0].Value.(string)
 			startFlag := ""
+			var err error
 			switch options[0].Name {
 			case "custom-mint":
 				startFlag = "Start to mint using custom-mint model. Please wait patiently."
@@ -79,8 +80,9 @@ var (
 						Content: startFlag,
 					},
 				})
-				resp = handleCustomMint(userAddress)
+				resp, err = handleCustomMint(userAddress)
 			case "easy-mint":
+
 				startFlag = "Start to mint using easy-mint model. Please wait patiently."
 				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 					Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -88,12 +90,31 @@ var (
 						Content: startFlag,
 					},
 				})
-				resp = handleEasyMint(userAddress)
+
+				resp, err = handleEasyMint(userAddress)
 			}
+			if err != nil {
+				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Embeds: failMessageEmbed(err.Error()),
+				})
+				return
+			}
+			//button := discordgo.Button{
+			//	Label: "VIEW IN CONFLUX SCAN",
+			//	Style: discordgo.LinkButton,
+			//	URL: resp.NFTAddress,
+			//	Disabled: false,
+			//}
 
 			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
-				Content: resp,
+				//Components: []discordgo.MessageComponent{
+				//	discordgo.ActionsRow{
+				//		Components: []discordgo.MessageComponent{button},
+				//	},
+				//},
+				Embeds: successfulMessageEmbed(resp),
 			})
+			fmt.Println(resp)
 		},
 	}
 )
@@ -166,34 +187,34 @@ func checkRestrain(address string, mintType []byte) error{
 	return nil
 }
 
-func handleCustomMint(userAddress string) string{
+func handleCustomMint(userAddress string) (*models.MintResp, error){
 	_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
 
 	contractAddress := viper.GetString("customMint.contractAddress")
 	_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, contractAddress)
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
 
 	err = checkRestrain(userAddress, database.CustomMintBucket)
 	if err != nil {
 		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
-		return err.Error()
+		return nil, err
 	}
 
 	token, err := service.Login()
 	if err != nil {
 		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
-		return err.Error()
+		return nil, err
 	}
 
 	metadataUri, err := service.CreateMetadata(token, viper.GetString("customMint.fileUrl"), viper.GetString("customMint.name"), viper.GetString("customMint.description"))
 	if err != nil {
 		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
-		return err.Error()
+		return nil, err
 	}
 	resp , err := service.SendCustomMintRequest(token, models.CustomMintDto{
 		models.ContractInfoDto{
@@ -208,28 +229,28 @@ func handleCustomMint(userAddress string) string{
 	})
 	if err != nil {
 		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
-		return err.Error()
+		return nil, err
 	}
 
-	return fmt.Sprintf("Congratulate on minting NFT for %s successfully. Check this link to view it: %s \n  %s", resp.UserAddress, resp.NFTAddress, resp.Advertise)
+	return resp, err
+
 }
 
-func handleEasyMint(userAddress string)string {
+func handleEasyMint(userAddress string)(*models.MintResp, error) {
 	_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
 	if err != nil {
-
-		return err.Error()
+		return nil, err
 	}
 	err = checkRestrain(userAddress, database.EasyMintBucket)
 	if err != nil {
 		_ = database.InsertDB(userAddress, []byte("0"), database.EasyMintBucket)
-		return err.Error()
+		return nil, err
 	}
 
 	token, err := service.Login()
 	if err != nil {
 		_ = database.InsertDB(userAddress, []byte("0"), database.EasyMintBucket)
-		return err.Error()
+		return nil, err
 	}
 
 	resp , err := service.SendEasyMintRequest(token, models.EasyMintMetaDto{
@@ -241,9 +262,92 @@ func handleEasyMint(userAddress string)string {
 	})
 	if err != nil {
 		_ = database.InsertDB(userAddress, []byte("0"), database.EasyMintBucket)
-		return err.Error()
+		return nil, err
 	}
-	return fmt.Sprintf("Congratulate on minting NFT for %s successfully. Check this link to view it: %s \n  %s", resp.UserAddress, resp.NFTAddress, resp.Advertise)
+	return resp, nil
+}
+
+func successfulMessageEmbed(resp *models.MintResp) []*discordgo.MessageEmbed{
+	embeds := []*discordgo.MessageEmbed{
+		&discordgo.MessageEmbed{
+			Type: discordgo.EmbedTypeRich,
+			Title: ":rainbow: Mint NFT successfully  :rainbow:",
+			Description: "Congratulate on minting NFT successfully! The NFT information is showed in the following.",
+			Image: &discordgo.MessageEmbedImage{
+				URL: "https://img0.baidu.com/it/u=2475308105,1312864556&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=889",
+			},
+			Provider: &discordgo.MessageEmbedProvider{
+				Name: "come",
+				URL: "https://img0.baidu.com/it/u=2475308105,1312864556&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=889",
+			},
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name: "Mints Time",
+					Value: resp.Time,
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name: "Contract",
+					Value: resp.Contract,
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name: "Token ID",
+					Value: resp.TokenID,
+					Inline: true,
+				},
+				&discordgo.MessageEmbedField{
+					Name: "NFTURL",
+					Value: fmt.Sprintf("[VIEW IN CONFLUX SCAN](%s)", resp.NFTAddress),
+					Inline: false,
+				},
+				&discordgo.MessageEmbedField{
+					Name: "Advertise",
+					Value: viper.GetString("advertise"),
+					Inline: false,
+				},
+			},
+			Author: &discordgo.MessageEmbedAuthor{
+				Name: "NFTRainbow",
+				URL: "https://docs.nftrainbow.xyz/",
+				IconURL: "https://img0.baidu.com/it/u=2475308105,1312864556&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=889",
+			},
+		},
+	}
+
+	return embeds
+}
+
+func failMessageEmbed(message string) []*discordgo.MessageEmbed{
+	embeds := []*discordgo.MessageEmbed{
+		&discordgo.MessageEmbed{
+			Type: discordgo.EmbedTypeRich,
+			Title: ":scream: Failed to Mint NFT  :scream:",
+			Description: "There is problem during minting NFT. ",
+			Image: &discordgo.MessageEmbedImage{
+				URL: "https://gimg2.baidu.com/image_search/src=http%3A%2F%2Ftva1.sinaimg.cn%2Fbmiddle%2F006APoFYly1g55m70z1uvj30hs0hidhd.jpg&refer=http%3A%2F%2Ftva1.sinaimg.cn&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1664935347&t=223d106a8cbc9c825b5a34ff36b3678c",
+			},
+			Fields: []*discordgo.MessageEmbedField{
+				&discordgo.MessageEmbedField{
+					Name: "Error message",
+					Value: message,
+					Inline: false,
+				},
+				&discordgo.MessageEmbedField{
+					Name: "Advertise",
+					Value: viper.GetString("advertise"),
+					Inline: false,
+				},
+			},
+			Author: &discordgo.MessageEmbedAuthor{
+				Name: "NFTRainbow",
+				URL: "https://docs.nftrainbow.xyz/",
+				IconURL: "https://img0.baidu.com/it/u=2475308105,1312864556&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=889",
+			},
+		},
+	}
+
+	return embeds
 }
 
 
