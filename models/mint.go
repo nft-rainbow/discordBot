@@ -55,6 +55,7 @@ type MintTask struct {
 	Hash      string `gorm:"type:varchar(256)" json:"hash"`
 	TxId      uint   `gorm:"index" json:"tx_id"`
 	Error     string `gorm:"type:text" json:"error"`
+	ErrMessage string `json:"message"`
 }
 
 type BaseModel struct {

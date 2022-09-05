@@ -16,7 +16,6 @@ import (
 func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.MintResp, error){
 	b, err := json.Marshal(dto)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 	fmt.Println("Start to easy mint")
@@ -25,7 +24,6 @@ func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.Mint
 	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
 		return  nil, err
 	}
 
@@ -33,16 +31,10 @@ func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.Mint
 	content, err := ioutil.ReadAll(resp.Body)
 	err = json.Unmarshal(content, &tmp)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
-	t := make(map[string]interface{})
-	err = json.Unmarshal(content, &t)
-	if err != nil {
-		return nil, err
-	}
-	if t["code"] != nil {
-		return nil, errors.New(t["message"].(string))
+	if tmp.ErrMessage != "" {
+		return nil, errors.New(tmp.ErrMessage)
 	}
 	id, err := getTokenId(tmp.ID, token)
 	if err != nil {
@@ -64,7 +56,6 @@ func SendEasyMintRequest(token string, dto models.EasyMintMetaDto) (*models.Mint
 func SendCustomMintRequest(token string, dto models.CustomMintDto) (*models.MintResp, error){
 	b, err := json.Marshal(dto)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
 
@@ -74,27 +65,18 @@ func SendCustomMintRequest(token string, dto models.CustomMintDto) (*models.Mint
 	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		panic(err)
 		return  nil, err
 	}
 
 	var tmp models.MintTask
 	content, err := ioutil.ReadAll(resp.Body)
-	t := make(map[string]interface{})
-	err = json.Unmarshal(content, &t)
-	if err != nil {
-		panic(err)
-		return nil, err
-	}
-	if t["code"] != nil {
-		return nil, errors.New(t["message"].(string))
-	}
 	err = json.Unmarshal(content, &tmp)
 	if err != nil {
-		panic(err)
 		return nil, err
 	}
-
+	if tmp.ErrMessage != "" {
+		return nil, errors.New(tmp.ErrMessage)
+	}
 
 	id, err := getTokenId(tmp.ID, token)
 	if err != nil {
@@ -143,13 +125,8 @@ func CreateMetadata(token, fileUrl, name, description string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	t := make(map[string]interface{})
-	err = json.Unmarshal(content, &t)
-	if err != nil {
-		return "", err
-	}
-	if t["code"] != nil {
-		return "", errors.New(t["message"].(string))
+	if tmp.Message != "" {
+		return "", errors.New(tmp.Message)
 	}
 
 	return tmp.MetadataURI, nil
@@ -177,6 +154,9 @@ func getTokenId(id uint, token string) (string, error) {
 		err = json.Unmarshal(content, &t)
 		if err != nil {
 			return "", err
+		}
+		if t.Error != "" {
+			return "", errors.New(t.Error)
 		}
 		time.Sleep(10 * time.Second)
 	}

@@ -114,7 +114,6 @@ var (
 				//},
 				Embeds: successfulMessageEmbed(resp),
 			})
-			fmt.Println(resp)
 		},
 	}
 )
@@ -168,27 +167,30 @@ func main() {
 }
 
 func checkRestrain(address string, mintType []byte) error{
-	count, err := database.GetCount(address, mintType)
+	status, err := database.GetStatus(address, mintType)
 	if err != nil {
 		return err
 	}
-	if count == nil {
-		err = database.InsertDB(address, []byte("1"), mintType)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
 
-	if !bytes.Equal(count, []byte("0")) {
-		return errors.New("This address has minted the NFT")
+	if bytes.Equal(status, []byte("Success")) {
+		return errors.New("This account has minted NFT")
+	}
+	if bytes.Equal(status, []byte("Minting")) {
+		return errors.New("This account is minting NFT")
 	}
 
 	return nil
 }
 
 func handleCustomMint(userAddress string) (*models.MintResp, error){
-	_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
+	var err error
+	defer func() {
+		status, _ := database.GetStatus(userAddress, database.CustomMintBucket)
+		if err != nil && !bytes.Equal(status, []byte("Success")) {
+			_ = database.InsertDB(userAddress, []byte("NoMinting"), database.CustomMintBucket)
+		}
+	}()
+	_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -201,19 +203,17 @@ func handleCustomMint(userAddress string) (*models.MintResp, error){
 
 	err = checkRestrain(userAddress, database.CustomMintBucket)
 	if err != nil {
-		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
 		return nil, err
 	}
+	_ = database.InsertDB(userAddress, []byte("Minting"), database.CustomMintBucket)
 
 	token, err := service.Login()
 	if err != nil {
-		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
 		return nil, err
 	}
 
 	metadataUri, err := service.CreateMetadata(token, viper.GetString("customMint.fileUrl"), viper.GetString("customMint.name"), viper.GetString("customMint.description"))
 	if err != nil {
-		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
 		return nil, err
 	}
 	resp , err := service.SendCustomMintRequest(token, models.CustomMintDto{
@@ -228,28 +228,33 @@ func handleCustomMint(userAddress string) (*models.MintResp, error){
 		},
 	})
 	if err != nil {
-		_ = database.InsertDB(userAddress, []byte("0"), database.CustomMintBucket)
 		return nil, err
 	}
+	_ = database.InsertDB(userAddress, []byte("Success"), database.CustomMintBucket)
 
 	return resp, err
-
 }
 
 func handleEasyMint(userAddress string)(*models.MintResp, error) {
-	_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
+	var err error
+	defer func() {
+		status, _ := database.GetStatus(userAddress, database.EasyMintBucket)
+		if err != nil && !bytes.Equal(status, []byte("Success")) {
+			_ = database.InsertDB(userAddress, []byte("NoMinting"), database.EasyMintBucket)
+		}
+	}()
+	_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
 	if err != nil {
 		return nil, err
 	}
 	err = checkRestrain(userAddress, database.EasyMintBucket)
 	if err != nil {
-		_ = database.InsertDB(userAddress, []byte("0"), database.EasyMintBucket)
 		return nil, err
 	}
+	_ = database.InsertDB(userAddress, []byte("Minting"), database.EasyMintBucket)
 
 	token, err := service.Login()
 	if err != nil {
-		_ = database.InsertDB(userAddress, []byte("0"), database.EasyMintBucket)
 		return nil, err
 	}
 
@@ -261,9 +266,9 @@ func handleEasyMint(userAddress string)(*models.MintResp, error) {
 		FileUrl: viper.GetString("easyMint.fileUrl"),
 	})
 	if err != nil {
-		_ = database.InsertDB(userAddress, []byte("0"), database.EasyMintBucket)
 		return nil, err
 	}
+	_ = database.InsertDB(userAddress, []byte("Success"), database.EasyMintBucket)
 	return resp, nil
 }
 
@@ -297,7 +302,7 @@ func successfulMessageEmbed(resp *models.MintResp) []*discordgo.MessageEmbed{
 					Inline: true,
 				},
 				&discordgo.MessageEmbedField{
-					Name: "NFTURL",
+					Name: "NFT URL",
 					Value: fmt.Sprintf("[VIEW IN CONFLUX SCAN](%s)", resp.NFTAddress),
 					Inline: false,
 				},

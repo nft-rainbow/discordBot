@@ -25,4 +25,5 @@ type Attributes struct {
 type CreateMetadataResponse struct {
 	metadata    Metadata
 	MetadataURI string `json:"metadata_uri"`
+	Message string `json:"message"`
 }

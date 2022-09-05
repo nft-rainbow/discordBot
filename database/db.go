@@ -11,6 +11,9 @@ var (
 
 var EasyMintBucket = []byte("easy-mint-bucket")
 var CustomMintBucket = []byte("custom-mint-bucket")
+var EasyMintCache = make(map[string]bool)
+var CustomMintCache = make(map[string]bool)
+
 
 func ConnectDB(){
 	var err error
@@ -57,7 +60,7 @@ func InsertDB(address string, val, bucketName []byte) error {
 	return nil
 }
 
-func GetCount(address string, bucketName []byte) ([]byte, error) {
+func GetStatus(address string, bucketName []byte) ([]byte, error) {
 	key := []byte(address)
 	var val []byte
 
