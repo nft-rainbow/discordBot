@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/bwmarrin/discordgo"
@@ -10,7 +11,9 @@ import (
 	"github.com/nft-rainbow/discordBot/service"
 	"github.com/nft-rainbow/discordBot/utils"
 	"github.com/spf13/viper"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 )
@@ -37,24 +40,27 @@ var (
 				{
 					Name:        "custom-mint",
 					Description: "Mint a nft through the contract deployed by the admin",
-					Options: []*discordgo.ApplicationCommandOption{
-						{
-							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "user_address",
-							Description: "The address of the user",
-							Required:    true,
-						},
-					},
 					Type: discordgo.ApplicationCommandOptionSubCommand,
 				},
 				{
 					Name:        "easy-mint",
 					Description: "Mint a nft through the NFTfactory contract owned by NFTRainbow",
+					Type: discordgo.ApplicationCommandOptionSubCommand,
+				},
+			},
+		},
+		{
+			Name:        "bind",
+			Description: "Command for binding addresses",
+			Options: []*discordgo.ApplicationCommandOption{
+				{
+					Name:        "conflux",
+					Description: "Bind the discord account with the conflux account",
 					Options: []*discordgo.ApplicationCommandOption{
 						{
 							Type:        discordgo.ApplicationCommandOptionString,
-							Name:        "user_address",
-							Description: "The address of the user",
+							Name:        "conflux_address",
+							Description: "User's conflux address",
 							Required:    true,
 						},
 					},
@@ -68,7 +74,6 @@ var (
 		"claim": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 			options := i.ApplicationCommandData().Options
 			var resp *models.MintResp
-			userAddress := options[0].Options[0].Value.(string)
 			startFlag := ""
 			var err error
 			switch options[0].Name {
@@ -80,7 +85,8 @@ var (
 						Content: startFlag,
 					},
 				})
-				resp, err = handleCustomMint(userAddress)
+
+				resp, err = handleCustomMint(i.Interaction.Member.User.ID, i.ChannelID)
 			case "easy-mint":
 
 				startFlag = "Start to mint using easy-mint model. Please wait patiently."
@@ -91,7 +97,7 @@ var (
 					},
 				})
 
-				resp, err = handleEasyMint(userAddress)
+				resp, err = handleEasyMint(i.Interaction.Member.User.ID, i.ChannelID)
 			}
 			if err != nil {
 				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
@@ -105,7 +111,6 @@ var (
 			//	URL: resp.NFTAddress,
 			//	Disabled: false,
 			//}
-
 			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
 				//Components: []discordgo.MessageComponent{
 				//	discordgo.ActionsRow{
@@ -113,6 +118,34 @@ var (
 				//	},
 				//},
 				Embeds: successfulMessageEmbed(resp),
+			})
+		},
+		"bind": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			options := i.ApplicationCommandData().Options
+			userAddress := options[0].Options[0].Value.(string)
+			startFlag := ""
+			var err error
+			switch options[0].Name {
+			case "conflux":
+				startFlag = "Start to bind address."
+				s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+					Type: discordgo.InteractionResponseChannelMessageWithSource,
+					Data: &discordgo.InteractionResponseData{
+						Content: startFlag,
+					},
+				})
+				err = HandleBindCfxAddress(i.Interaction.Member.User.ID, userAddress)
+			}
+			if err != nil {
+				s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+					Embeds: failMessageEmbed(err.Error()),
+				})
+				return
+			}
+
+			s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{
+				//Embeds: successfulMessageEmbed(resp),
+				Content: "success",
 			})
 		},
 	}
@@ -127,7 +160,6 @@ func init() {
 	}
 	database.ConnectDB()
 }
-
 
 func init() {
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
@@ -172,9 +204,6 @@ func checkRestrain(address string, mintType []byte) error{
 		return err
 	}
 
-	if bytes.Equal(status, []byte("Success")) {
-		return errors.New("This account has minted NFT")
-	}
 	if bytes.Equal(status, []byte("Minting")) {
 		return errors.New("This account is minting NFT")
 	}
@@ -182,93 +211,67 @@ func checkRestrain(address string, mintType []byte) error{
 	return nil
 }
 
-func handleCustomMint(userAddress string) (*models.MintResp, error){
+func handleCustomMint(userId, channelId string) (*models.MintResp, error){
 	var err error
 	defer func() {
-		status, _ := database.GetStatus(userAddress, database.CustomMintBucket)
-		if err != nil && !bytes.Equal(status, []byte("Success")) {
-			_ = database.InsertDB(userAddress, []byte("NoMinting"), database.CustomMintBucket)
+		//status, _ := database.GetStatus(userId, database.CustomMintBucket)
+		if err != nil {
+			_ = database.InsertDB(userId, []byte("NoMinting"), database.CustomMintBucket)
 		}
 	}()
-	_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
-	if err != nil {
-		return nil, err
-	}
+	//_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, userId)
+	//if err != nil {
+	//	return nil, err
+	//}
 
-	contractAddress := viper.GetString("customMint.contractAddress")
-	_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, contractAddress)
+	err = checkRestrain(userId, database.CustomMintBucket)
 	if err != nil {
 		return nil, err
 	}
+	_ = database.InsertDB(userId, []byte("Minting"), database.CustomMintBucket)
 
-	err = checkRestrain(userAddress, database.CustomMintBucket)
-	if err != nil {
-		return nil, err
-	}
-	_ = database.InsertDB(userAddress, []byte("Minting"), database.CustomMintBucket)
-
-	token, err := service.Login()
-	if err != nil {
-		return nil, err
-	}
-
-	metadataUri, err := service.CreateMetadata(token, viper.GetString("customMint.fileUrl"), viper.GetString("customMint.name"), viper.GetString("customMint.description"))
-	if err != nil {
-		return nil, err
-	}
-	resp , err := service.SendCustomMintRequest(token, models.CustomMintDto{
-		models.ContractInfoDto{
-			Chain: viper.GetString("chainType"),
-			ContractType: viper.GetString("customMint.contractType"),
-			ContractAddress: contractAddress,
-		},
-		models.MintItemDto{
-			MintToAddress: userAddress,
-			MetadataUri: metadataUri,
-		},
+	resp, err := service.SendCustomMintRequest(models.MintReq{
+		UserID: userId,
+		ChannelID: channelId,
 	})
 	if err != nil {
 		return nil, err
 	}
-	_ = database.InsertDB(userAddress, []byte("Success"), database.CustomMintBucket)
+	//_ = database.InsertDB(userId, []byte("Success"), database.CustomMintBucket)
+	_ = database.InsertDB(userId, []byte("NoMinting"), database.CustomMintBucket)
+
 
 	return resp, err
 }
 
-func handleEasyMint(userAddress string)(*models.MintResp, error) {
+func handleEasyMint(userId, channelId string)(*models.MintResp, error) {
 	var err error
 	defer func() {
-		status, _ := database.GetStatus(userAddress, database.EasyMintBucket)
-		if err != nil && !bytes.Equal(status, []byte("Success")) {
-			_ = database.InsertDB(userAddress, []byte("NoMinting"), database.EasyMintBucket)
+		//status, _ := database.GetStatus(userId, database.EasyMintBucket)
+		if err != nil {
+			_ = database.InsertDB(userId, []byte("NoMinting"), database.EasyMintBucket)
 		}
 	}()
-	_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
+	//_, err = utils.CheckCfxAddress(utils.CONFLUX_TEST, userId)
+	//if err != nil {
+	//	return nil, err
+	//}
+	err = checkRestrain(userId, database.EasyMintBucket)
 	if err != nil {
 		return nil, err
 	}
-	err = checkRestrain(userAddress, database.EasyMintBucket)
-	if err != nil {
-		return nil, err
-	}
-	_ = database.InsertDB(userAddress, []byte("Minting"), database.EasyMintBucket)
+	_ = database.InsertDB(userId, []byte("Minting"), database.EasyMintBucket)
 
-	token, err := service.Login()
-	if err != nil {
-		return nil, err
-	}
-
-	resp , err := service.SendEasyMintRequest(token, models.EasyMintMetaDto{
-		Chain: viper.GetString("chainType"),
-		Name: viper.GetString("easyMint.name"),
-		Description: viper.GetString("easyMint.description"),
-		MintToAddress: userAddress,
-		FileUrl: viper.GetString("easyMint.fileUrl"),
+	resp, err := service.SendEasyMintRequest(models.MintReq{
+		UserID: userId,
+		ChannelID: channelId,
 	})
 	if err != nil {
 		return nil, err
 	}
-	_ = database.InsertDB(userAddress, []byte("Success"), database.EasyMintBucket)
+	_ = database.InsertDB(userId, []byte("NoMinting"), database.EasyMintBucket)
+
+
 	return resp, nil
 }
 
@@ -319,7 +322,6 @@ func successfulMessageEmbed(resp *models.MintResp) []*discordgo.MessageEmbed{
 			},
 		},
 	}
-
 	return embeds
 }
 
@@ -353,6 +355,49 @@ func failMessageEmbed(message string) []*discordgo.MessageEmbed{
 	}
 
 	return embeds
+}
+
+func HandleBindCfxAddress(userId, userAddress string) error{
+	_, err := utils.CheckCfxAddress(utils.CONFLUX_TEST, userAddress)
+	if err != nil {
+		return err
+	}
+	dto := models.BindCFXAddress{
+		UserId: userId,
+		UserAddress: userAddress,
+	}
+
+	b, err := json.Marshal(dto)
+
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "user/address", bytes.NewBuffer(b))
+	req.Header.Add("Content-Type", "application/json")
+	//req.Header.Add("Authorization", "Bearer " + token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
+func GetBindCfxAddress(userId string) (string, error) {
+	req, _ := http.NewRequest("GET", viper.GetString("host") + "user/address/" + userId, nil)
+	req.Header.Add("Content-Type", "application/json")
+	//req.Header.Add("Authorization", "Bearer " + token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	var tmp models.GetBindCFXAddressResp
+	content, err := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(content, &tmp)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	return tmp.CFXAddress, nil
 }
 
 

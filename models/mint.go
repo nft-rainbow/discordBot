@@ -35,9 +35,10 @@ type MintItemDto struct {
 type MintResp struct {
 	UserAddress string `form:"user_address" json:"user_address"`
 	NFTAddress string `form:"nft_address" json:"nft_address"`
-	Contract string `form:"advertise" json:"advertise"`
+	Contract string `form:"contract" json:"contract"`
 	TokenID string `form:"token_id" json:"token_id"`
 	Time string `json:"created_at"`
+	Message string `json:"message"`
 }
 
 
@@ -63,4 +64,9 @@ type BaseModel struct {
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
 	DeletedAt gorm.DeletedAt `gorm:"index" json:"deleted_at"`
+}
+
+type MintReq struct {
+	UserID string `json:"user_id" binding:"required"`
+	ChannelID string `json:"channel_id" binding:"required"`
 }
