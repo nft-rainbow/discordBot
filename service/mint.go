@@ -38,15 +38,16 @@ func SendEasyMintRequest(dto models.MintReq) (*models.MintResp, error){
 	return &res, nil
 }
 
-func SendCustomMintRequest(dto models.MintReq) (*models.MintResp, error){
+func SendCustomMintRequest(dto models.MintReq, token string) (*models.MintResp, error){
 	b, err := json.Marshal(dto)
 	if err != nil {
 		return nil, err
 	}
 
 	fmt.Println("Start to custom mint")
-	req, _ := http.NewRequest("POST", viper.GetString("host") + "user/mint/custom", bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "discord/user/mint", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return  nil, err

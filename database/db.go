@@ -11,9 +11,6 @@ var (
 
 var EasyMintBucket = []byte("easy-mint-bucket")
 var CustomMintBucket = []byte("custom-mint-bucket")
-var EasyMintCache = make(map[string]bool)
-var CustomMintCache = make(map[string]bool)
-
 
 func ConnectDB(){
 	var err error

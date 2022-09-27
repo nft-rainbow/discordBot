@@ -230,10 +230,16 @@ func handleCustomMint(userId, channelId string) (*models.MintResp, error){
 	}
 	_ = database.InsertDB(userId, []byte("Minting"), database.CustomMintBucket)
 
-	resp, err := service.SendCustomMintRequest(models.MintReq{
+	req := models.MintReq{
 		UserID: userId,
 		ChannelID: channelId,
-	})
+	}
+
+	token, err := service.LoginApp(req)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := service.SendCustomMintRequest(req, token)
 	if err != nil {
 		return nil, err
 	}
@@ -369,7 +375,7 @@ func HandleBindCfxAddress(userId, userAddress string) error{
 
 	b, err := json.Marshal(dto)
 
-	req, _ := http.NewRequest("POST", viper.GetString("host") + "user/address", bytes.NewBuffer(b))
+	req, _ := http.NewRequest("POST", viper.GetString("host") + "discord/address", bytes.NewBuffer(b))
 	req.Header.Add("Content-Type", "application/json")
 	//req.Header.Add("Authorization", "Bearer " + token)
 	resp, err := http.DefaultClient.Do(req)

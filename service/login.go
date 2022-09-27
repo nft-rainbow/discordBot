@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/nft-rainbow/discordBot/models"
 	"github.com/spf13/viper"
 	"io/ioutil"
 	"net/http"
@@ -17,6 +18,35 @@ func Login() (string, error) {
 	b, _ := json.Marshal(data)
 	fmt.Println("Start to login")
 	req, err := http.NewRequest("POST", viper.GetString("host") + "v1/login", bytes.NewBuffer(b))
+	if err != nil {
+		panic(err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return  "", err
+	}
+	content, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return "", err
+	}
+	t := make(map[string]interface{})
+	err = json.Unmarshal(content, &t)
+	if err != nil {
+		return "", err
+	}
+	if t["code"] != nil {
+		return "", errors.New(t["message"].(string))
+	}
+
+	return t["token"].(string), nil
+}
+
+func LoginApp(dto models.MintReq) (string, error) {
+	b, _ := json.Marshal(dto)
+	fmt.Println("Start to login")
+	req, err := http.NewRequest("POST", viper.GetString("host") + "discord/login", bytes.NewBuffer(b))
 	if err != nil {
 		panic(err)
 	}
